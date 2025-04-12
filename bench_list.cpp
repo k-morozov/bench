@@ -55,10 +55,12 @@ BENCHMARK(MemoryLatencyList)
     // ->Repetitions(4)
     ->RangeMultiplier(2)
     ->Range(1, 32)
-    ->DenseRange(36, 64, 4)
-    // ->DenseRange(8, 108, 4)
-    // ->Range(48, 36864)
-    // ->Range(36864, 2 * 36864)
+    ->DenseRange(48, 160, 16)
+    ->Range(256, 1_KB)
+    ->DenseRange(1_KB, 4_KB, 512)
+
+    ->Range(4_KB, 16_KB)
+    ->DenseRange(20_KB, 48_KB, 4_KB)
     ;
 
 BENCHMARK_MAIN();
