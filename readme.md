@@ -13,7 +13,9 @@ sudo perf stat -B -e L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores,L1-d
 
 ### TLDR;
 
-![alt text](bench_results.png)
+![alt text](doc/bench_results.png)
+
+![alt text](doc/bench_results2.png)
 
 ### Intel® Xeon® Gold 6338
 
