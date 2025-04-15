@@ -1,5 +1,6 @@
 #include <array>
 #include <cstdint>
+#include <cstdlib>
 #include <vector>
 
 #include "benchmark/benchmark.h"
@@ -7,19 +8,30 @@
 constexpr std::size_t kCachelineSize = 1 << 6;
 constexpr std::size_t kPageSize = 1 << 12;
 
+auto constexpr operator""_B(unsigned long long int n) { return n; }
 auto constexpr operator""_KB(unsigned long long int n) { return n * 1024; }
 auto constexpr operator""_MB(unsigned long long int n) { return n * 1024 * 1024; }
 
 struct Node {
     Node* next{};
-    std::array<std::byte, kPageSize> padding;
+    // Node* jump{};
+    std::array<std::byte, kPageSize> padding{};
 };
 
 Node* walk(Node * p, uint64_t ops) {
+    // how will change the latency with atomic?
+
+    // std::atomic<uint64_t> value{};
     while (ops > 0) {
         p = p->next;
-        --ops;
+        // value.fetch_add(1);
+        // benchmark::DoNotOptimize(value);
+        ops--;
+
+        benchmark::DoNotOptimize(p);
+        benchmark::DoNotOptimize(ops);
     }
+
     return p;
 }
 
@@ -33,6 +45,7 @@ static void MemoryLatencyList(benchmark::State& state) {
     assert(num_nodes > 0);
 
     std::vector<Node> buffer(num_nodes);
+    benchmark::DoNotOptimize(buffer);
 
     for (std::size_t i=0; i<buffer.size() - 1; i++) {
         buffer[i].next = &buffer[i+1];
@@ -54,13 +67,13 @@ BENCHMARK(MemoryLatencyList)
     ->ArgName("size KB")
     // ->Repetitions(4)
     ->RangeMultiplier(2)
-    ->Range(1, 32)
-    ->DenseRange(48, 160, 16)
-    ->Range(256, 1_KB)
-    ->DenseRange(1_KB, 4_KB, 512)
-
-    ->Range(4_KB, 16_KB)
-    ->DenseRange(20_KB, 48_KB, 4_KB)
+    // ->Range(1, 32)
+    // ->DenseRange(48, 160, 16)
+    // ->Range(256, 1_KB)
+    // ->DenseRange(1_KB, 4_KB, 512)
+    // ->Range(4_KB, 16_KB)
+    // ->DenseRange(20_KB, 48_KB, 4_KB)
+    ->Arg(48_KB)
     ;
 
 BENCHMARK_MAIN();

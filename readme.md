@@ -1,7 +1,5 @@
 ```shell
 cmake .. -DBENCHMARK_ENABLE_GTEST_TESTS=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build . && ./bench_list
-
-sudo perf stat -B -e L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores,L1-dcache-store-misses,l2_request.all,l2_request.miss,LLC-loads,LLC-load-misses,cache-references,cache-misses,dTLB-loads,dTLB-load-misses,dTLB-stores,dTLB-store-misses,dtlb_load_misses.walk_completed,dtlb_store_misses.walk_completed,itlb_misses.miss_caused_walk,dtlb_load_misses.stlb_hit,dtlb_load_misses.walk_completed,dtlb_load_misses.walk_completed_4k,dtlb_store_misses.stlb_hit -r 1 ./bench_list
 ```
 
 ## CPU
@@ -10,12 +8,42 @@ sudo perf stat -B -e L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores,L1-d
 * https://www.intel.com/content/www/us/en/products/sku/212285/intel-xeon-gold-6338-processor-48m-cache-2-00-ghz/specifications.html
 
 
-
 ### TLDR;
 
 ![alt text](doc/bench_results.png)
 
 ![alt text](doc/bench_results2.png)
+
+### Interesting point from Intel's manual
+
+* Intel® 64 and IA-32 Architectures Optimization Reference Manual.
+* Programmer's Reference Manual For the 2019 10th Generation Intel Core™ Processors based on the "Ice Lake" Platform Volume 7: Memory Cache
+
+Chapters:
+* E.2.5 Cache Hierarchy
+* 2.6.3 Cache and Memory Subsystem
+* E.2.5.2 L1 DCache
+
+Points:
+* L1: Two load operations and one store operation can be handled each cycle.
+* The DTLB can perform three linear to physical address translations every cycle.
+* Processor can do two page walks in parallel.
+* Data Prefetch to L1 Data Cache: Data prefetching is triggered by load operations when the following conditions are met: The prefetched data is within the same 4K byte page as the load instruction that triggered it.
+* Intel® Advanced Smart Cache provides up to 6 MBytes of second-level cache shared between two processor cores (quad-core processors have up to 12 MBytes of L2); up to 24 way/set associativity.
+* PML4
+- Cache PWC, PDE
+
+## Table 2-7. Cache Parameters of the Ice Lake Client Microarchitecture
+
+* L1 Data Cache Unit (DCU): 4 cycle (2 ns)
+* L2 Mid-level Cache Size (MLC): 12 cycle (6 ns)
+* L3 Last-level Cache (LLC): Up to 2MB per core/up to 16 ways, 44 cycle (22 ns)
+
+## Table 2-8. TLB Parameters of the Ice Lake Client Microarchitecture
+
+* First Level Data (loads): 64
+* First Level Data (stores): 16
+* Second Level: 2048
 
 ### Intel® Xeon® Gold 6338
 
@@ -115,3 +143,36 @@ MemoryLatencyList/size KB:40960       40.6 ns         40.6 ns     15728640 Nodes
 MemoryLatencyList/size KB:45056       46.1 ns         46.1 ns     15728640 Nodes=704Ki
 MemoryLatencyList/size KB:49152       52.2 ns         52.2 ns     10485760 Nodes=768Ki
 ```
+
+Referencies:
+
+* Intel manual
+* https://nexthink.com/blog/smarter-cpu-testing-kaby-lake-haswell-memory
+* https://www.youtube.com/watch?v=vQVTD7o6V9U&ab_channel=YandexforDevelopers
+* https://community.intel.com/t5/Software-Tuning-Performance/Understanding-L1-L2-L3-misses/td-p/1056573
+
+Useful:
+
+```shell
+sudo perf stat -B -e L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores,L1-dcache-store-misses,l2_request.all,l2_request.miss,LLC-loads,LLC-load-misses,cache-references,cache-misses,dTLB-loads,dTLB-load-misses,dTLB-stores,dTLB-store-misses,dtlb_load_misses.walk_completed,dtlb_store_misses.walk_completed,itlb_misses.miss_caused_walk,dtlb_load_misses.stlb_hit,dtlb_load_misses.walk_completed,dtlb_load_misses.walk_completed_4k,dtlb_store_misses.stlb_hit -r 1 ./bench_list
+
+sudo perf stat  -e L1-dcache-loads,L1-dcache-load-misses,MEM_LOAD_RETIRED.L1_MISS,cycle_activity.stalls_l1d_miss -r 1 ./bench_list
+
+sudo perf stat  -e L1-dcache-loads,L1-dcache-load-misses,l2_request.all,l2_request.miss,MEM_LOAD_RETIRED.L1_MISS,cycle_activity.stalls_l1d_miss,l1d_pend_miss.fb_full,l1d_pend_miss.l2_stalls,l1d_pend_miss.pending,l2_request.all,l2_request.miss,LLC-loads,LLC-load-misses,mem_load_completed.l1_miss_any -r 1 ./bench_list
+```
+
+
+Потому что не каждый L1D miss = stall.
+Некоторые промахи могут быть "скрыты" (hidden) благодаря out-of-order исполнению и спекуляции.
+А вот stalls_l1d_miss показывает, где CPU реально простаивает.
+
+
+23.2.8.6
+Way, Set Conflicts
+The memory hierarchy determines forwarding requirements based on the address of the access. The L1
+data cache uses address bits 11:6 to identify which cache set to use. Forwarding logic uses bits 11:0 and
+the size of the access to identify potential forwarding or conflicts between loads and stores. If there are
+many conflicts, performance could be degraded.
+
+E.2.5.1
+Load and Store Operation Overview
