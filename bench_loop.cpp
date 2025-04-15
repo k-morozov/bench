@@ -6,6 +6,10 @@
 #include "benchmark/benchmark.h"
 
 
+constexpr size_t WAYS_OF_ASSOCIATIVITY = 12;
+constexpr size_t NUMBER_OF_SET = 64;
+constexpr size_t COHERENCY_LINE_SIZE = 64;
+
 const size_t STRIDE = 4096;
 const size_t SUB_STRIDE = 64;
 constexpr size_t CACHE_LINE = 64;
@@ -100,16 +104,13 @@ static void LoopOffset(benchmark::State& state) {
 BENCHMARK(SimpleLoop)
     ->ArgName("Pages")
     ->Repetitions(1)
-    ->Arg(64*12*64)
-    // ->Arg(2048)
-    // ->Arg(4096)
-    // ->Arg(8000)
+    ->Arg(NUMBER_OF_SET*WAYS_OF_ASSOCIATIVITY*COHERENCY_LINE_SIZE)
     ;
 
 BENCHMARK(LoopOffset)
     ->ArgName("Pages")
     ->Repetitions(1)
-    ->Arg(64*12*64)
+    ->Arg(NUMBER_OF_SET*WAYS_OF_ASSOCIATIVITY*COHERENCY_LINE_SIZE)
     ;
 
 BENCHMARK_MAIN();
