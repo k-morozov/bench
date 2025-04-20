@@ -17,17 +17,12 @@ constexpr std::size_t kPageSize = 4_KB;
 
 struct Node {
     Node* next{};
-    std::array<std::byte, 4 * kPageSize> padding{};
+    std::array<std::byte, kPageSize> padding{};
 };
 
 Node* walk(Node * p, uint64_t ops) {
-    // how will change the latency with atomic?
-    // std::atomic<uint64_t> value{};
-
     while (ops > 0) {
         p = p->next;
-        // value.fetch_add(1);
-        // benchmark::DoNotOptimize(value);
         ops--;
 
         benchmark::DoNotOptimize(p);
@@ -49,17 +44,8 @@ static void MemoryLatencyList(benchmark::State& state) {
     std::vector<Node> buffer(num_nodes);
     benchmark::DoNotOptimize(buffer);
 
-    std::map<uint32_t, int> unique_patterns;
     for (std::size_t i=0; i<buffer.size() - 1; i++) {
         buffer[i].next = &buffer[i+1];
-
-        uint64_t ptr_value = reinterpret_cast<uint64_t>(&buffer[i]);
-        const uint64_t mask = (1 << 6) - 1;
-        uint32_t bit_pattern = (ptr_value >> 4) & mask;
-        unique_patterns[bit_pattern]++;
-    }
-    for (const auto& [k, v] : unique_patterns) {
-        std::cout << "k=" << k << ", count=" << v << std::endl;
     }
     
     buffer.back().next = &buffer.front();
@@ -79,14 +65,13 @@ BENCHMARK(MemoryLatencyList)
     ->ArgName("size KB")
     // ->Repetitions(4)
     ->RangeMultiplier(2)
-    // ->Range(1, 32)
-    // ->DenseRange(48, 160, 16)
-    // // Kb here is confusing :)
-    // ->Range(256, 1_KB)
-    // ->DenseRange(1_KB, 4_KB, 512)
-    // ->Range(4_KB, 16_KB)
-    // ->DenseRange(20_KB, 48_KB, 4_KB)
-    ->Arg(48_KB)
+    ->Range(1, 32)
+    ->DenseRange(48, 160, 16)
+    ->Range(256, 1_K)
+    ->DenseRange(1_K, 4_K, 512)
+    ->Range(4_K, 16_K)
+    ->DenseRange(20_K, 48_K, 4_K)
+    ->Arg(48_K)
     ;
 
 BENCHMARK_MAIN();
